@@ -10,7 +10,7 @@ from app.config import settings
 from app.database import get_db
 from app.models.schemas import SkinAnalysisResult, AnalysisReportSummary
 from app.models.db_models import AnalysisReportDB, JournalEntryDB
-from app.services.youcam_client import youcam_client, sanitize_secret
+from app.services.youcam_client import youcam_client, sanitize_secret, FaceValidationError
 
 logger = logging.getLogger("skinwise.analysis")
 router = APIRouter(tags=["Skin Analysis"])
@@ -97,6 +97,13 @@ async def analyze_skin(
             file_name=file_name,
             content_type=normalized_content_type,
             force_demo=bool(demo)
+        )
+    except FaceValidationError as fve:
+        clean_msg = sanitize_secret(str(fve))
+        logger.info(f"Photo framing validation notice: {clean_msg}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Photo Framing Notice: {clean_msg}. Please take a closer selfie or crop closer to your face (face must occupy >60% of frame width)."
         )
     except PermissionError as pe:
         logger.warning(f"Analysis authorization error: {pe}")

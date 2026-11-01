@@ -274,6 +274,12 @@ export const AnalysisPage: React.FC = () => {
               <li className="flex items-start gap-2.5">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                 <span>
+                  <strong>Close-Up Framing (Crucial):</strong> Your face must take up at least 60% of the photo width (chin to hairline centered). Avoid distant or full-body photos.
+                </span>
+              </li>
+              <li className="flex items-start gap-2.5">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                <span>
                   <strong>Natural Daylight:</strong> Face a window with diffused morning or midday light. Avoid harsh yellow overhead spotlights.
                 </span>
               </li>

@@ -11,6 +11,10 @@ from app.models.schemas import SkinAnalysisResult, SkinMetric
 
 logger = logging.getLogger("skinwise.youcam")
 
+class FaceValidationError(ValueError):
+    """Raised when YouCam reports that the face cannot be analyzed (framing, sizing, lighting)."""
+    pass
+
 # Officially verified Standard Definition (SD) dst_actions for YouCam Skin Analysis API v2.1
 # Note: Never mix with HD actions (hd_*) in the same request.
 SUPPORTED_SD_ACTIONS: List[str] = [
@@ -284,7 +288,11 @@ class YouCamClient:
                     return task_data
                 elif task_status in ("error", "failed"):
                     raw_err = task_data.get("error_message") or task_data.get("message") or "Unknown YouCam error"
-                    raise RuntimeError(f"YouCam task {task_id} failed: {sanitize_secret(raw_err)}")
+                    clean_err = sanitize_secret(raw_err)
+                    lower_err = clean_err.lower()
+                    if any(p in lower_err for p in ["too small", "face", "width", "60%", "not detected", "multiple", "angle", "blur"]):
+                        raise FaceValidationError(clean_err)
+                    raise RuntimeError(f"YouCam task {task_id} failed: {clean_err}")
                 elif task_status in ("running", "processing", "pending", "queued"):
                     await asyncio.sleep(self.poll_interval)
                 else:
@@ -530,6 +538,8 @@ class YouCamClient:
 
             # 5. Normalize response
             return self.normalize_results(task_data)
+        except FaceValidationError:
+            raise
         except Exception as exc:
             if settings.ALLOW_DEMO_FALLBACK:
                 clean_err = sanitize_secret(str(exc))

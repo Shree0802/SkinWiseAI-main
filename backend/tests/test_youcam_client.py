@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import AsyncMock, patch, MagicMock
-from app.services.youcam_client import YouCamClient, determine_severity, SUPPORTED_SD_ACTIONS
+from app.services.youcam_client import YouCamClient, determine_severity, SUPPORTED_SD_ACTIONS, FaceValidationError
 from app.config import settings
 
 def test_build_task_payload_pure_sd_and_valid_actions():
@@ -188,7 +188,7 @@ async def test_poll_task_error_handling():
 
     with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
         mock_get.return_value = error_resp
-        with pytest.raises(RuntimeError, match="Face not detected"):
+        with pytest.raises((FaceValidationError, RuntimeError), match="Face not detected"):
             await client.poll_task_result("task_xyz_789")
 
 def test_normalize_results_without_fabrication():
