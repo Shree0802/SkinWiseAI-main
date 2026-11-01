@@ -34,12 +34,13 @@ def test_build_task_payload_pure_sd_and_valid_actions():
 
     # 3. Assert unaccepted legacy names are NOT present
     assert "spots" not in dst_actions, "'spots' was rejected by YouCam; must use 'age_spot'"
-    assert "dark_circles" not in dst_actions, "'dark_circles' was rejected; must use 'dark_circle'"
+    assert "dark_circles" not in dst_actions, "'dark_circles' was rejected; must use 'dark_circle_v2'"
+    assert "dark_circle" not in dst_actions, "'dark_circle' was rejected (status 400); must use 'dark_circle_v2'"
     assert "eyebags" not in dst_actions, "'eyebags' was rejected; must use 'eye_bag'"
 
     # 4. Assert verified replacements ARE present
     assert "age_spot" in dst_actions
-    assert "dark_circle" in dst_actions
+    assert "dark_circle_v2" in dst_actions
     assert "eye_bag" in dst_actions
 
     # 5. Assert strict SD mode: NO HD actions mixed in
@@ -128,10 +129,11 @@ async def test_create_task_success():
         json_body = called_kwargs.get("json", {})
         assert json_body["src_file_id"] == "test_file_id_abc"
         assert "age_spot" in json_body["dst_actions"]
-        assert "dark_circle" in json_body["dst_actions"]
+        assert "dark_circle_v2" in json_body["dst_actions"]
         assert "eye_bag" in json_body["dst_actions"]
         assert "spots" not in json_body["dst_actions"]
         assert "dark_circles" not in json_body["dst_actions"]
+        assert "dark_circle" not in json_body["dst_actions"]
         assert "eyebags" not in json_body["dst_actions"]
 
 @pytest.mark.asyncio
@@ -247,7 +249,7 @@ def test_normalize_results_with_age_spot_and_dark_circle():
                     "raw_score": 86.5,
                     "mask_urls": {"alpha_mask": "https://example.com/spot.png"}
                 },
-                "dark_circle": {
+                "dark_circle_v2": {
                     "ui_score": 71.0,
                     "raw_score": 69.2
                 },

@@ -18,12 +18,12 @@ SUPPORTED_SD_ACTIONS: List[str] = [
     "pore",
     "texture",
     "acne",
-    "age_spot",     # Replaced invalid "spots" (which triggered value 4 rejected)
+    "age_spot",
     "redness",
     "oiliness",
     "moisture",
-    "dark_circle",  # Replaced invalid "dark_circles" (which triggered value 8 rejected)
-    "eye_bag",      # Replaced invalid "eyebags" (which triggered value 9 rejected)
+    "dark_circle_v2",  # Officially verified action name in YouCam API v2.0/v2.1
+    "eye_bag",
     "skin_type",
     "radiance",
     "firmness"
@@ -70,7 +70,7 @@ METRIC_DEFINITIONS = {
         "label": "Hydration & Moisture",
         "explanation": "Estimates skin barrier moisture balance and epidermal hydration."
     },
-    "dark_circle": {
+    "dark_circle_v2": {
         "key": "dark_circles",
         "label": "Dark Eye Circles",
         "explanation": "Measures infra-orbital hyperpigmentation under the lower eyelid."
@@ -514,20 +514,32 @@ class YouCamClient:
                 "Configure a valid key or enable demo mode."
             )
 
-        # 1. Request upload URL
-        file_size = len(image_bytes)
-        file_id, upload_url = await self.request_file_upload(file_name, file_size, content_type)
+        try:
+            # 1. Request upload URL
+            file_size = len(image_bytes)
+            file_id, upload_url = await self.request_file_upload(file_name, file_size, content_type)
 
-        # 2. Upload binary to signed URL
-        await self.upload_image_binary(upload_url, image_bytes, content_type)
+            # 2. Upload binary to signed URL
+            await self.upload_image_binary(upload_url, image_bytes, content_type)
 
-        # 3. Create analysis task
-        task_id = await self.create_skin_analysis_task(file_id)
+            # 3. Create analysis task
+            task_id = await self.create_skin_analysis_task(file_id)
 
-        # 4. Poll until completion
-        task_data = await self.poll_task_result(task_id)
+            # 4. Poll until completion
+            task_data = await self.poll_task_result(task_id)
 
-        # 5. Normalize response
-        return self.normalize_results(task_data)
+            # 5. Normalize response
+            return self.normalize_results(task_data)
+        except Exception as exc:
+            if settings.ALLOW_DEMO_FALLBACK:
+                clean_err = sanitize_secret(str(exc))
+                logger.warning(
+                    f"YouCam API live call failed ({clean_err}). Falling back to demo mode (ALLOW_DEMO_FALLBACK=True)."
+                )
+                fallback = self.generate_demo_analysis()
+                fallback.summary = f"[DEMO FALLBACK: YouCam provider notice - {clean_err}] {fallback.summary}"
+                fallback.source = "demo_provider_fallback"
+                return fallback
+            raise
 
 youcam_client = YouCamClient()
