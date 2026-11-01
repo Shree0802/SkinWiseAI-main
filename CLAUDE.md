@@ -19,13 +19,17 @@ Frontend will be running at `http://localhost:5173`.
 
 ### Run Automated Tests
 ```powershell
-# Backend Pytest Suite (19 tests)
+# Backend Pytest Suite (27 tests)
 cd backend
-.\.venv\Scripts\pytest -v
+pytest -v
 
-# Frontend Vitest Suite
+# Frontend Vitest Suite (9 tests)
 cd frontend
 npm run test
+
+# Frontend Linter (0 warnings, 0 errors)
+cd frontend
+npm run lint
 
 # Production Build Check
 cd frontend

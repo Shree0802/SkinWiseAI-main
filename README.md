@@ -5,9 +5,17 @@
 [![Python FastAPI](https://img.shields.io/badge/Backend-FastAPI%20%7C%20Python%203.13-009688?style=for-the-badge&logo=fastapi)](https://fastapi.tiangolo.com)
 [![React Vite TS](https://img.shields.io/badge/Frontend-React%2019%20%7C%20Vite%20%7C%20TypeScript-61DAFB?style=for-the-badge&logo=react)](https://react.dev)
 [![Tailwind CSS](https://img.shields.io/badge/Styling-Tailwind%20CSS-38B2AC?style=for-the-badge&logo=tailwind-css)](https://tailwindcss.com)
-[![Tests Passing](https://img.shields.io/badge/Tests-19%20Pytest%20%2B%205%20Vitest%20Passed-10B981?style=for-the-badge)](https://pytest.org)
+[![Tests Passing](https://img.shields.io/badge/Tests-27%20Pytest%20%2B%209%20Vitest%20Passed-10B981?style=for-the-badge)](https://pytest.org)
+[![Vercel Deployment](https://img.shields.io/badge/Frontend-Vercel%20Deployed-black?style=for-the-badge&logo=vercel)](https://skin-wise-ai-main.vercel.app)
+[![Render Deployment](https://img.shields.io/badge/Backend-Render%20Deployed-46E3B7?style=for-the-badge&logo=render)](https://skinwise-ai-backend-wt7t.onrender.com)
 
 **SkinWise AI** solves a critical consumer problem: helping students and skincare consumers navigate overwhelming skincare shelves with objective computer vision diagnostics, explainable cosmetic routines, and smart shopping in **Indian Rupees (₹)**.
+
+- **Live Production Frontend**: [https://skin-wise-ai-main.vercel.app](https://skin-wise-ai-main.vercel.app)
+- **Live Production Backend**: [https://skinwise-ai-backend-wt7t.onrender.com](https://skinwise-ai-backend-wt7t.onrender.com)
+- **Production API v1 Base**: [https://skinwise-ai-backend-wt7t.onrender.com/api/v1](https://skinwise-ai-backend-wt7t.onrender.com/api/v1)
+- **Swagger Documentation**: [https://skinwise-ai-backend-wt7t.onrender.com/docs](https://skinwise-ai-backend-wt7t.onrender.com/docs)
+- **GitHub Repository**: [https://github.com/Shree0802/SkinWiseAI-main](https://github.com/Shree0802/SkinWiseAI-main)
 
 ---
 
@@ -15,18 +23,20 @@
 
 1. **Real YouCam Skin AI Integration (Server-to-Server v2.0)**:
    - Implements Perfect Corp's official enterprise pipeline: file initialization (`POST /s2s/v2.0/file`), binary PUT upload to signed storage URL, task generation (`POST /s2s/v2.0/task/skin-analysis`), and bounded polling (`GET /s2s/v2.0/task/skin-analysis/{task_id}`).
-   - Extracts empirical scores for wrinkles, pores, skin texture, dark spots, redness, oiliness, hydration, and dark eye circles.
+   - Strictly uses verified Standard Definition actions (`wrinkle`, `pore`, `texture`, `acne`, `age_spot`, `redness`, `oiliness`, `moisture`, `dark_circle`, `eye_bag`, `skin_type`, `radiance`, `firmness`).
 2. **Zero-Fabrication Policy**:
    - Never hallucinates, guesses, or invents missing metrics. If the API omits a field, it remains transparently labeled as unassessed.
+   - Offline / demo results are explicitly marked with `[DEMO MODE]` and `source="demo_mock"`.
 3. **Transparent Routine Builder**:
    - Deterministic rule engine constructing Morning (AM) and Evening (PM) cosmetic routines with explicit rationales, patch-test guidance, and non-medical disclaimers.
 4. **Smart Indian Skincare Shopping (₹)**:
    - Curated product catalogue priced in Indian Rupees (₹) with an explainable multi-vector matching algorithm that calculates match scores and explicit reasons.
    - Interactive side-by-side comparison drawer for up to 3 products.
 5. **Skin Progress Journal**:
-   - Record daily observations, track skin feel changes, and link past diagnostic scans stored locally in SQLite with full deletion controls.
-6. **Privacy-First Design**:
-   - Zero-selfie retention: facial images are processed ephemerally in memory and never written to disk or database.
+   - Record daily observations, track skin feel changes, and link past diagnostic scans stored locally in SQLite or production PostgreSQL with full user deletion controls.
+6. **Privacy-First Design & In-Memory Image Validation**:
+   - Zero-selfie retention: facial images are held in memory during the active request and never written to disk or database.
+   - Rigorous image validation via Pillow (`PIL.Image`) ensuring files are genuine, non-corrupted JPEG/PNG/WebP photos.
 
 ---
 
@@ -38,27 +48,25 @@ skinwise-ai/
     src/
       components/               # Navbar, Footer, MetricCard, ProductCard, ComparisonDrawer, etc.
       pages/                    # LandingPage, AnalysisPage, ResultsPage, RoutinePage, ShopPage, JournalPage
-      services/                 # apiClient.ts (Typed Fetch wrapper)
+      services/                 # apiClient.ts (Typed Fetch wrapper with auto /api/v1 normalization & timeouts)
       types/                    # TypeScript interfaces
-      tests/                    # Vitest component & calculation tests
+      tests/                    # Vitest test suite (apiClient, metricCalculation, productPricing)
     package.json
+    vercel.json                 # SPA rewrites ensuring route refreshes work seamlessly
     .env.example
   backend/                      # FastAPI Python Application
     app/
       api/                      # Versioned routers (health, analysis, routine, products, journal)
       models/                   # Pydantic schemas & SQLAlchemy DB models
       services/                 # youcam_client.py, routine_engine.py, catalog_service.py
-      config.py                 # Pydantic BaseSettings
-      database.py               # SQLite database & session management
-      main.py                   # FastAPI entrypoint
-    tests/                      # Pytest automated test suite (19 tests)
+      config.py                 # Pydantic BaseSettings with environment validation
+      database.py               # SQLite & PostgreSQL compatible database engine
+      main.py                   # FastAPI entrypoint with Lifespan & CORS configuration
+    tests/                      # Pytest automated test suite (27 tests)
     requirements.txt
     .env.example
-  docs/
-    ARCHITECTURE.md             # Integration flow & sequence diagram
-    DEVPOST_SUBMISSION.md       # Devpost hackathon submission draft
-    DEMO_VIDEO_SCRIPT.md        # 2.5 minute video demo walkthrough
-    SCREENSHOT_CHECKLIST.md     # Screenshot checklist for submission
+  render.yaml                   # Infrastructure-as-code for Render deployment
+  vercel.json                   # Root SPA rewrite configuration
   .gitignore
   README.md
   CLAUDE.md
@@ -86,22 +94,26 @@ Edit `backend/.env`:
 APP_NAME=SkinWise AI
 APP_ENV=development
 DEBUG=True
+API_V1_PREFIX=/api/v1
 
-# YouCam API Configuration (Perfect Corp S2S)
-# Obtain your API Key from: https://docs.makeupar.com
-YOUCAM_API_KEY=YOUR_YOUCAM_API_KEY_HERE
+# YouCam API Configuration (Perfect Corp S2S Enterprise API)
+# Obtain your API key from Perfect Corp YouCam developer portal (https://docs.makeupar.com)
+YOUCAM_API_KEY=
 YOUCAM_API_BASE_URL=https://yce-api-01.makeupar.com
 YOUCAM_POLL_INTERVAL=1.5
 YOUCAM_POLL_TIMEOUT=60.0
 
-# When true, demo mode is available for offline testing if API key is unset
+# In development, set to True for offline testing. In production, set to False.
 ALLOW_DEMO_FALLBACK=True
 
-# SQLite Database
+# SQLite Database for local dev
 DATABASE_URL=sqlite:///./skinwise.db
+
+# CORS Allowed Origins (Comma-separated)
+CORS_ORIGINS=https://skin-wise-ai-main.vercel.app,http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000,http://127.0.0.1:3000
 ```
 
-> **Note on Demo Mode:** If you do not yet have active YouCam API credentials, leave `YOUCAM_API_KEY` empty and ensure `ALLOW_DEMO_FALLBACK=True`. SkinWise AI will run with clearly labeled synthetic demo data for local review and UI testing.
+> **Note on Demo Mode:** If you do not have an active YouCam API key, leaving `YOUCAM_API_KEY` empty with `ALLOW_DEMO_FALLBACK=True` allows local review with clearly labeled synthetic demo data.
 
 ---
 
@@ -138,26 +150,35 @@ npm run dev
 
 ## 🧪 Automated Testing
 
-### Run Backend Tests (Pytest)
+### Backend Test Suite (Pytest — 27 tests passed)
 ```powershell
 cd backend
-.\.venv\Scripts\pytest -v
+pytest -v
 ```
+
 **Test Coverage Includes:**
-- `/api/v1/health` status and DB connection.
-- Image validation (rejecting non-image MIME types, empty files, size limits).
-- Unconfigured API key handling.
-- Mocked YouCam S2S workflow (`POST /file` -> `PUT` binary -> `POST /task` -> bounded `GET` polling).
-- Task polling error states and timeout handling.
+- `/api/v1/health` accurate status, service mode, and database connectivity.
+- CORS origin verification with credentials protection.
+- In-memory image validation (rejecting non-image MIME types, corrupted bytes, empty files).
+- Complete YouCam S2S workflow (`POST /file` -> `PUT` binary -> `POST /task` -> bounded `GET` polling).
+- YouCam polling timeout and 429 rate limit handling.
+- Secret sanitization (redacting API keys and Bearer tokens in error messages and logs).
 - Metric normalization without data fabrication.
 - Routine generation rules for Oily, Dry, Sensitive, and Mature skin.
 - Product matching with budget constraints and avoided ingredients.
-- Journal and report persistence and deletion CRUD.
+- Journal and report persistence, linking, and unlinked report deletion.
+- Full end-to-end user journey test (`test_complete_end_to_end_user_journey`).
 
-### Run Frontend Tests (Vitest)
+### Frontend Test Suite (Vitest — 9 tests passed)
 ```powershell
 cd frontend
 npm run test
+```
+
+### Frontend Linting (Oxlint — 0 warnings, 0 errors)
+```powershell
+cd frontend
+npm run lint
 ```
 
 ### Production Build Verification
@@ -168,25 +189,55 @@ npm run build
 
 ---
 
-## 🔒 Security & Privacy Practices
+## ☁️ Deployment Guide
 
-1. **Credentials Isolation**: `YOUCAM_API_KEY` is exclusively consumed by the Python backend via server-side HTTPX client. It is never exposed in browser bundles or `VITE_` variables.
-2. **Ephemeral Image Handling**: Uploaded facial images are held in server memory only during the active analysis request and are never written to disk.
-3. **Data Retention & User Rights**: Only structured non-biometric metrics (scores, timestamps, notes) are stored in SQLite. Users can delete individual journal entries or past diagnostic reports at any time.
-4. **Cosmetic Disclaimer**: Clear disclaimers and patch-test guidelines are integrated on all pages.
+### Frontend Deployment (Vercel)
+
+- **Root Directory**: `frontend`
+- **Framework Preset**: `Vite`
+- **Build Command**: `npm run build`
+- **Output Directory**: `dist`
+- **Install Command**: `npm install`
+- **Environment Variables**:
+  ```env
+  VITE_API_BASE_URL=https://skinwise-ai-backend-wt7t.onrender.com/api/v1
+  ```
+- **SPA Routing**: Handled via `vercel.json` rewrites, ensuring direct browser reloads on `/analyze`, `/results/:id`, `/routine`, `/shop`, `/journal` resolve properly without 404s.
+
+### Backend Deployment (Render)
+
+- **Environment**: `Python`
+- **Root Directory**: `backend`
+- **Build Command**: `pip install -r requirements.txt`
+- **Start Command**: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+- **Environment Variables**:
+  ```env
+  APP_NAME=SkinWise AI
+  APP_ENV=production
+  DEBUG=False
+  API_V1_PREFIX=/api/v1
+  YOUCAM_API_KEY=<your-official-youcam-api-key>
+  YOUCAM_API_BASE_URL=https://yce-api-01.makeupar.com
+  YOUCAM_POLL_INTERVAL=1.5
+  YOUCAM_POLL_TIMEOUT=60
+  ALLOW_DEMO_FALLBACK=False
+  DATABASE_URL=sqlite:///./skinwise.db
+  CORS_ORIGINS=https://skin-wise-ai-main.vercel.app,http://localhost:5173,http://127.0.0.1:5173
+  ```
 
 ---
 
-## 📝 Hackathon Submission Deliverables
+## 🔒 Security & Privacy Practices
 
-- **Devpost Submission Draft**: [`docs/DEVPOST_SUBMISSION.md`](docs/DEVPOST_SUBMISSION.md)
-- **Video Demo Script**: [`docs/DEMO_VIDEO_SCRIPT.md`](docs/DEMO_VIDEO_SCRIPT.md)
-- **Screenshot Checklist**: [`docs/SCREENSHOT_CHECKLIST.md`](docs/SCREENSHOT_CHECKLIST.md)
-- **Architecture Documentation**: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
+1. **Credentials Isolation**: `YOUCAM_API_KEY` is exclusively handled on the server side by FastAPI and is never bundled in frontend JavaScript.
+2. **Secret Sanitization**: Error handlers redact Bearer tokens and API keys to prevent accidental leaks.
+3. **Zero-Selfie Disk Storage**: Facial images are processed in RAM only and are discarded after analysis.
+4. **Data Ownership**: Only non-biometric structured scores and user notes are saved in the database, with one-click deletion available at any time.
+5. **Medical Disclaimers**: Clear cosmetic-only disclaimers and patch-test guidelines are displayed across all pages.
 
 ---
 
 ## ⚖️ License & Disclaimer
 
 SkinWise AI was developed for the **YouCam API Skin AI & eCommerce VTO Hackathon** on Devpost.  
-*Disclaimer: SkinWise AI suggestions are for informational and cosmetic skincare purposes only. They do not constitute medical diagnosis, treatment, or clinical prescription. Consult a licensed dermatologist for chronic or severe skin conditions.*
+*Disclaimer: SkinWise AI suggestions are for educational and cosmetic skincare purposes only. They do not constitute medical diagnosis, treatment, or clinical prescription. Consult a licensed dermatologist for chronic or severe skin conditions.*

@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import uuid
+import re
 from datetime import datetime, timezone
 from typing import Dict, Any, Optional, Tuple, List
 import httpx
@@ -91,6 +92,19 @@ METRIC_DEFINITIONS = {
     }
 }
 
+def sanitize_secret(text: str) -> str:
+    """
+    Strips raw API credentials and bearer tokens from error strings or logs.
+    """
+    if not text:
+        return ""
+    sanitized = text
+    if settings.YOUCAM_API_KEY and len(settings.YOUCAM_API_KEY) > 4:
+        sanitized = sanitized.replace(settings.YOUCAM_API_KEY, "[REDACTED_API_KEY]")
+    # Redact Bearer tokens
+    sanitized = re.sub(r'Bearer\s+[A-Za-z0-9_\-\.]+', 'Bearer [REDACTED_TOKEN]', sanitized)
+    return sanitized
+
 def determine_severity(score: Optional[float]) -> Optional[str]:
     """
     Derives user-friendly cosmetic severity categories based on 0-100 scores.
@@ -118,10 +132,11 @@ class YouCamClient:
 
     @property
     def is_configured(self) -> bool:
-        return bool(self.api_key and self.api_key.strip() and self.api_key != "YOUR_YOUCAM_API_KEY_HERE")
+        # Check that a genuine, non-dummy API key is set
+        key = (self.api_key or "").strip()
+        return bool(key and key != "YOUR_YOUCAM_API_KEY_HERE" and len(key) >= 8)
 
     def _get_headers(self) -> Dict[str, str]:
-        # YouCam API expects Bearer authorization header
         return {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json"
@@ -143,14 +158,20 @@ class YouCamClient:
         }
         
         async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.post(url, headers=self._get_headers(), json=payload)
+            try:
+                response = await client.post(url, headers=self._get_headers(), json=payload)
+            except httpx.RequestError as exc:
+                raise RuntimeError(f"Connection failure connecting to YouCam File service: {sanitize_secret(str(exc))}")
+
             if response.status_code in (401, 403):
-                raise PermissionError("YouCam API authentication failed. Verify YOUCAM_API_KEY.")
+                raise PermissionError("YouCam API authentication failed. Please verify YOUCAM_API_KEY.")
+            if response.status_code == 429:
+                raise RuntimeError("YouCam API rate limit reached. Please retry in a few moments.")
             if response.status_code != 200:
-                raise RuntimeError(f"YouCam File API initialization failed ({response.status_code}): {response.text}")
+                clean_err = sanitize_secret(response.text)
+                raise RuntimeError(f"YouCam File API initialization failed ({response.status_code}): {clean_err}")
 
             data = response.json()
-            # Standard YouCam response structure: data.data.files[0] or data.files[0]
             files_list = data.get("data", {}).get("files") or data.get("files")
             if not files_list or len(files_list) == 0:
                 raise ValueError("Malformed YouCam response: missing file registration data.")
@@ -162,26 +183,30 @@ class YouCamClient:
                 raise ValueError("Malformed YouCam file upload response structure.")
 
             upload_url = requests[0]["url"]
-            return file_id, upload_url
+            return str(file_id), str(upload_url)
 
     async def upload_image_binary(self, upload_url: str, image_bytes: bytes, content_type: str) -> None:
         """
-        Uploads the binary payload directly to the pre-signed S3 / storage URL.
+        Uploads binary payload directly to the pre-signed S3 / storage URL.
         """
         async with httpx.AsyncClient(timeout=60.0) as client:
             headers = {"Content-Type": content_type}
-            response = await client.put(upload_url, content=image_bytes, headers=headers)
+            try:
+                response = await client.put(upload_url, content=image_bytes, headers=headers)
+            except httpx.RequestError as exc:
+                raise RuntimeError(f"Connection error transferring image to storage: {sanitize_secret(str(exc))}")
+
             if response.status_code not in (200, 201):
-                raise RuntimeError(f"Binary image upload to signed URL failed with HTTP {response.status_code}")
+                clean_err = sanitize_secret(response.text)
+                raise RuntimeError(f"Binary image upload to signed URL failed with HTTP {response.status_code}: {clean_err}")
 
     def build_task_payload(self, file_id: str) -> Dict[str, Any]:
         """
         Constructs the task creation payload for YouCam Skin Analysis API v2.1.
         Adheres strictly to the official YouCam API specification:
-        - Uses pure Standard Definition (SD) actions.
-        - Does not mix SD and HD actions (e.g. no 'hd_' prefixes).
-        - Replaces unaccepted values (spots -> age_spot, dark_circles -> dark_circle, eyebags -> eye_bag).
-        - miniserver_args includes only valid SD flags (enable_mask_overlay=True) without HD-pore background conflicts.
+        - Pure Standard Definition (SD) actions.
+        - Documented action names: age_spot, dark_circle, eye_bag.
+        - miniserver_args includes enable_mask_overlay=True.
         """
         return {
             "src_file_id": file_id,
@@ -199,11 +224,18 @@ class YouCamClient:
         payload = self.build_task_payload(file_id)
 
         async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.post(url, headers=self._get_headers(), json=payload)
+            try:
+                response = await client.post(url, headers=self._get_headers(), json=payload)
+            except httpx.RequestError as exc:
+                raise RuntimeError(f"Connection failure dispatching YouCam task: {sanitize_secret(str(exc))}")
+
             if response.status_code in (401, 403):
-                raise PermissionError("YouCam task creation authentication failed.")
+                raise PermissionError("YouCam task creation authentication failed. Verify YOUCAM_API_KEY.")
+            if response.status_code == 429:
+                raise RuntimeError("YouCam API rate limit reached. Please wait a moment.")
             if response.status_code not in (200, 201, 202):
-                raise RuntimeError(f"YouCam task creation failed ({response.status_code}): {response.text}")
+                clean_err = sanitize_secret(response.text)
+                raise RuntimeError(f"YouCam task creation failed ({response.status_code}): {clean_err}")
 
             data = response.json()
             task_id = (
@@ -228,9 +260,21 @@ class YouCamClient:
                 if elapsed > self.poll_timeout:
                     raise TimeoutError(f"YouCam Skin Analysis task {task_id} timed out after {self.poll_timeout}s.")
 
-                response = await client.get(url, headers=self._get_headers())
+                try:
+                    response = await client.get(url, headers=self._get_headers())
+                except httpx.RequestError as exc:
+                    logger.warning(f"Polling transient network error: {exc}. Retrying...")
+                    await asyncio.sleep(self.poll_interval)
+                    continue
+
+                if response.status_code == 429:
+                    logger.warning("YouCam rate limit received during poll. Backing off...")
+                    await asyncio.sleep(self.poll_interval * 2)
+                    continue
+
                 if response.status_code != 200:
-                    raise RuntimeError(f"Error polling YouCam task {task_id}: {response.status_code} {response.text}")
+                    clean_err = sanitize_secret(response.text)
+                    raise RuntimeError(f"Error polling YouCam task {task_id}: {response.status_code} {clean_err}")
 
                 data = response.json()
                 task_data = data.get("data", data)
@@ -239,8 +283,8 @@ class YouCamClient:
                 if task_status in ("success", "done", "completed"):
                     return task_data
                 elif task_status in ("error", "failed"):
-                    error_msg = task_data.get("error_message") or task_data.get("message") or "Unknown YouCam error"
-                    raise RuntimeError(f"YouCam task {task_id} failed: {error_msg}")
+                    raw_err = task_data.get("error_message") or task_data.get("message") or "Unknown YouCam error"
+                    raise RuntimeError(f"YouCam task {task_id} failed: {sanitize_secret(raw_err)}")
                 elif task_status in ("running", "processing", "pending", "queued"):
                     await asyncio.sleep(self.poll_interval)
                 else:
@@ -457,11 +501,14 @@ class YouCamClient:
         2. In demo mode or if unconfigured (and fallback allowed), returns clearly labeled demo result
         3. In real mode: requests upload URL -> PUTs image binary -> creates task -> polls result -> normalizes.
         """
-        if force_demo or (not self.is_configured and settings.ALLOW_DEMO_FALLBACK):
-            logger.info("Executing demo analysis (API key not configured or demo requested)")
+        if force_demo:
+            logger.info("Executing demo analysis (explicitly requested by client)")
             return self.generate_demo_analysis()
 
         if not self.is_configured:
+            if settings.ALLOW_DEMO_FALLBACK:
+                logger.info("Executing demo analysis (API key not configured and ALLOW_DEMO_FALLBACK=True)")
+                return self.generate_demo_analysis()
             raise PermissionError(
                 "YouCam API key is not configured in backend/.env (YOUCAM_API_KEY). "
                 "Configure a valid key or enable demo mode."

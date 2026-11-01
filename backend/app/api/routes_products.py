@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, HTTPException, status
 from typing import List, Optional
 from app.models.schemas import ProductItem, ProductMatchRequest
 from app.services.catalog_service import catalog_service
@@ -24,4 +24,9 @@ def match_products(request: ProductMatchRequest):
 @router.get("/products/compare", response_model=List[ProductItem])
 def compare_products(ids: str = Query(..., description="Comma separated list of product IDs")):
     id_list = [i.strip() for i in ids.split(",") if i.strip()]
+    if not id_list:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="At least one valid product ID must be provided for comparison."
+        )
     return catalog_service.compare_products(id_list)

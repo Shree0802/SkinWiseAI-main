@@ -111,3 +111,5 @@ class HealthResponse(BaseModel):
     youcam_configured: bool
     database_connected: bool
     version: str = "1.0.0"
+    service_mode: Optional[str] = "demo_fallback"  # "live_api", "demo_fallback", "unconfigured"
+    database_type: Optional[str] = "sqlite"        # "sqlite" or "postgresql"

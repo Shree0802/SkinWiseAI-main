@@ -120,4 +120,6 @@ export interface HealthStatus {
   youcam_configured: boolean;
   database_connected: boolean;
   version: string;
+  service_mode?: 'live_api' | 'demo_fallback' | 'unconfigured' | string;
+  database_type?: string;
 }

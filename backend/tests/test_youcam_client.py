@@ -273,3 +273,29 @@ def test_normalize_results_with_age_spot_and_dark_circle():
     assert "eyebags" in metric_keys
     assert metric_keys["eyebags"].score == 75.0
     assert metric_keys["eyebags"].severity == "Mild Concern"
+
+@pytest.mark.asyncio
+async def test_poll_task_timeout():
+    client = YouCamClient()
+    client.api_key = "test_key_123"
+    client.poll_interval = 0.01
+    client.poll_timeout = 0.03
+
+    running_resp = MagicMock()
+    running_resp.status_code = 200
+    running_resp.json.return_value = {"status": 200, "data": {"task_status": "running"}}
+
+    with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
+        mock_get.return_value = running_resp
+        with pytest.raises(TimeoutError, match="timed out"):
+            await client.poll_task_result("task_timeout_123")
+
+def test_sanitize_secret_removes_keys_and_tokens():
+    from app.services.youcam_client import sanitize_secret
+    raw_text = "Error Bearer secret_token_xyz connecting with key test_secret_api_key_456"
+    with patch("app.services.youcam_client.settings.YOUCAM_API_KEY", "test_secret_api_key_456"):
+        cleaned = sanitize_secret(raw_text)
+        assert "test_secret_api_key_456" not in cleaned
+        assert "[REDACTED_API_KEY]" in cleaned
+        assert "secret_token_xyz" not in cleaned
+        assert "[REDACTED_TOKEN]" in cleaned
