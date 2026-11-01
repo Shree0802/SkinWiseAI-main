@@ -1,20 +1,25 @@
 # SkinWise AI 🌿✨
 ### Explainable Skincare Decision Assistant powered by YouCam Skin AI API
 
+> 🌐 **Live Web Application**: [https://skin-wise-ai-main.vercel.app](https://skin-wise-ai-main.vercel.app)  
+> ⚡ **Live Production Backend**: [https://skinwiseai-main.onrender.com](https://skinwiseai-main.onrender.com)  
+> 📑 **API Documentation (Swagger UI)**: [https://skinwiseai-main.onrender.com/docs](https://skinwiseai-main.onrender.com/docs)  
+> 🏥 **API Health & Readiness Check**: [https://skinwiseai-main.onrender.com/api/v1/health](https://skinwiseai-main.onrender.com/api/v1/health)  
+
+[![Live App on Vercel](https://img.shields.io/badge/Live%20App-skin--wise--ai--main.vercel.app-6366F1?style=for-the-badge&logo=vercel)](https://skin-wise-ai-main.vercel.app)
+[![Backend on Render](https://img.shields.io/badge/Backend-skinwiseai--main.onrender.com-46E3B7?style=for-the-badge&logo=render)](https://skinwiseai-main.onrender.com)
 [![Built for YouCam API Hackathon](https://img.shields.io/badge/Devpost-YouCam%20Skin%20AI%20Hackathon%202026-6366F1?style=for-the-badge)](https://devpost.com)
 [![Python FastAPI](https://img.shields.io/badge/Backend-FastAPI%20%7C%20Python%203.13-009688?style=for-the-badge&logo=fastapi)](https://fastapi.tiangolo.com)
 [![React Vite TS](https://img.shields.io/badge/Frontend-React%2019%20%7C%20Vite%20%7C%20TypeScript-61DAFB?style=for-the-badge&logo=react)](https://react.dev)
 [![Tailwind CSS](https://img.shields.io/badge/Styling-Tailwind%20CSS-38B2AC?style=for-the-badge&logo=tailwind-css)](https://tailwindcss.com)
 [![Tests Passing](https://img.shields.io/badge/Tests-27%20Pytest%20%2B%209%20Vitest%20Passed-10B981?style=for-the-badge)](https://pytest.org)
-[![Vercel Deployment](https://img.shields.io/badge/Frontend-Vercel%20Deployed-black?style=for-the-badge&logo=vercel)](https://skin-wise-ai-main.vercel.app)
-[![Render Deployment](https://img.shields.io/badge/Backend-Render%20Deployed-46E3B7?style=for-the-badge&logo=render)](https://skinwise-ai-backend-wt7t.onrender.com)
 
 **SkinWise AI** solves a critical consumer problem: helping students and skincare consumers navigate overwhelming skincare shelves with objective computer vision diagnostics, explainable cosmetic routines, and smart shopping in **Indian Rupees (₹)**.
 
 - **Live Production Frontend**: [https://skin-wise-ai-main.vercel.app](https://skin-wise-ai-main.vercel.app)
-- **Live Production Backend**: [https://skinwise-ai-backend-wt7t.onrender.com](https://skinwise-ai-backend-wt7t.onrender.com)
-- **Production API v1 Base**: [https://skinwise-ai-backend-wt7t.onrender.com/api/v1](https://skinwise-ai-backend-wt7t.onrender.com/api/v1)
-- **Swagger Documentation**: [https://skinwise-ai-backend-wt7t.onrender.com/docs](https://skinwise-ai-backend-wt7t.onrender.com/docs)
+- **Live Production Backend**: [https://skinwiseai-main.onrender.com](https://skinwiseai-main.onrender.com)
+- **Production API v1 Base**: [https://skinwiseai-main.onrender.com/api/v1](https://skinwiseai-main.onrender.com/api/v1)
+- **Swagger Documentation**: [https://skinwiseai-main.onrender.com/docs](https://skinwiseai-main.onrender.com/docs)
 - **GitHub Repository**: [https://github.com/Shree0802/SkinWiseAI-main](https://github.com/Shree0802/SkinWiseAI-main)
 
 ---
@@ -200,7 +205,7 @@ npm run build
 - **Install Command**: `npm install`
 - **Environment Variables**:
   ```env
-  VITE_API_BASE_URL=https://skinwise-ai-backend-wt7t.onrender.com/api/v1
+  VITE_API_BASE_URL=https://skinwiseai-main.onrender.com/api/v1
   ```
 - **SPA Routing**: Handled via `vercel.json` rewrites, ensuring direct browser reloads on `/analyze`, `/results/:id`, `/routine`, `/shop`, `/journal` resolve properly without 404s.
 

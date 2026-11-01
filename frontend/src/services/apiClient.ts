@@ -15,10 +15,10 @@ import type {
  * Ensures the resulting base URL always ends with '/api/v1' without duplication.
  *
  * Examples:
- *  "https://skinwise-ai-backend-wt7t.onrender.com"      -> "https://skinwise-ai-backend-wt7t.onrender.com/api/v1"
- *  "https://skinwise-ai-backend-wt7t.onrender.com/"     -> "https://skinwise-ai-backend-wt7t.onrender.com/api/v1"
- *  "https://skinwise-ai-backend-wt7t.onrender.com/api/v1"  -> "https://skinwise-ai-backend-wt7t.onrender.com/api/v1"
- *  "https://skinwise-ai-backend-wt7t.onrender.com/api/v1/" -> "https://skinwise-ai-backend-wt7t.onrender.com/api/v1"
+ *  "https://skinwiseai-main.onrender.com"      -> "https://skinwiseai-main.onrender.com/api/v1"
+ *  "https://skinwiseai-main.onrender.com/"     -> "https://skinwiseai-main.onrender.com/api/v1"
+ *  "https://skinwiseai-main.onrender.com/api/v1"  -> "https://skinwiseai-main.onrender.com/api/v1"
+ *  "https://skinwiseai-main.onrender.com/api/v1/" -> "https://skinwiseai-main.onrender.com/api/v1"
  *  undefined / "" -> "http://localhost:8000/api/v1"
  */
 export function getNormalizedApiBaseUrl(): string {
